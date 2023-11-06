@@ -9,148 +9,76 @@ I'd like to create a simple 2d runner game like super mario with scrolling backg
 Of course! Here's a basic implementation of a 2D runner game like Super Mario with a scrolling background using WinForms in C#:
 ```
 using System;
-using System.Collections.Generic;
-using System.Net;
-using Newtonsoft.Json;
-class QuizQuestion
+using System.Drawing;
+using System.Windows.Forms;
+namespace _2DRunner
 {
-    public string Question { get; set; }
-    public string CorrectAnswer { get; set; }
-    public List<string> IncorrectAnswers { get; set; }
-}
-class HighScoreEntry
-{
-    public string PlayerName { get; set; }
-    public int Score { get; set; }
-}
-class QuizGame
-{
-    private List<QuizQuestion> questions;
-    private List<HighScoreEntry> highScores;
-    public QuizGame()
+    public partial class Form1 : Form
     {
-        questions = new List<QuizQuestion>();
-        highScores = new List<HighScoreEntry>();
-    }
-    public void LoadQuestionsFromAPI()
-    {
-        string apiUrl = "https://opentdb.com/api.php?amount=5&type=multiple";
-        using (var webClient = new WebClient())
+        private System.Windows.Forms.Timer timer;
+        private int playerX = 50;
+        private int playerY = 350;
+        private int scrollOffset = 0;
+        private bool jumping = false;
+        private int jumpForce = 15;
+        private int gravity = 1;
+        public Form1()
         {
-            // Ladda ner JSON-data från API:et
-            string json = webClient.DownloadString(apiUrl);
-            // Konvertera JSON till objekt
-            dynamic data = JsonConvert.DeserializeObject(json);
-            if (data != null && data.results != null)
+            InitializeComponent();
+            InitializeGame();
+        }
+        private void InitializeGame()
+        {
+            Width = 800;
+            Height = 400;
+            timer = new System.Windows.Forms.Timer();
+            timer.Interval = 20;
+            timer.Tick += GameLoop;
+            timer.Start();
+            DoubleBuffered = true;
+        }
+        private void GameLoop(object sender, EventArgs e)
+        {
+            // Scroll the background
+            scrollOffset -= 5;
+            // Check if the player is jumping
+            if (jumping)
             {
-                // Loopa igenom frågorna i datan och skapa QuizQuestion-objekt
-                foreach (var result in data.results)
-                {
-                    QuizQuestion question = new QuizQuestion {
-                        Question = result.question,
-                        CorrectAnswer = result.correct_answer,
-                        IncorrectAnswers = new List<string>()
-                    };
-                    // Lägg till de inkorrekta svar som finns i datan
-                    foreach (var incorrectAnswer in result.incorrect_answers)
-                    {
-                        question.IncorrectAnswers.Add(incorrectAnswer.ToString());
-                    }
-                    questions.Add(question);
-                }
+                playerY -= jumpForce;
+                jumpForce -= gravity;
+            }
+            // Check if the player has landed on the ground
+            if (playerY >= 350)
+            {
+                playerY = 350;
+                jumpForce = 15;
+                jumping = false;
+            }
+            Invalidate();
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics graphics = e.Graphics;
+            // Draw the background
+            for (int i = 0; i < 10; i++)
+            {
+                graphics.DrawImage(Properties.Resources.background, i * 800 + scrollOffset, 0, 800, 400);
+            }
+            // Draw the player
+            graphics.DrawImage(Properties.Resources.player, playerX, playerY, 50, 50);
+        }
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            // Check if the jump key is pressed
+            if (e.KeyCode == Keys.Space && !jumping)
+            {
+                jumping = true;
             }
         }
     }
-    public void AddHighScoreEntry(string playerName, int score)
-    {
-        HighScoreEntry entry = new HighScoreEntry {
-            PlayerName = playerName,
-            Score = score
-        };
-        highScores.Add(entry);
-    }
-    public void ShowHighScores()
-    {
-        Console.WriteLine("High Scores:");
-        foreach (var entry in highScores)
-        {
-            Console.WriteLine($"{entry.PlayerName}: {entry.Score}");
-        }
-    }
-    public void PlayQuiz()
-    {
-        // Slumpa frågor
-        Random random = new Random();
-        List<QuizQuestion> randomQuestions = new List<QuizQuestion>(questions);
-        randomQuestions.Shuffle(random);
-        int score = 0;
-        // Fråga varje fråga i den slumpade ordningen
-        foreach (var question in randomQuestions)
-        {
-            Console.WriteLine(question.Question);
-            // Slumpa ordningen på svarsalternativen
-            List<string> options = new List<string>(question.IncorrectAnswers);
-            options.Add(question.CorrectAnswer);
-            options.Shuffle(random);
-            // Visa svarsalternativen
-            for (int i = 0; i < options.Count; i++)
-            {
-                Console.WriteLine($"{i + 1}. {options[i]}");
-            }
-            // Läs spelarens svar
-            int playerChoice;
-            do
-            {
-                Console.Write("Your choice (1-4): ");
-            } while (!int.TryParse(Console.ReadLine(), out playerChoice) || playerChoice < 1 || playerChoice > 4);
-            // Kolla om spelarens svar är korrekt
-            if (options[playerChoice - 1] == question.CorrectAnswer)
-            {
-                Console.WriteLine("Correct!");
-                score++;
-            }
-            else
-            {
-                Console.WriteLine("Incorrect!");
-            }
-            Console.WriteLine();
-        }
-        // Visa spelarens resultat och fråga efter namn
-        Console.WriteLine($"Your score: {score}");
-        Console.Write("Enter your name: ");
-        string playerName = Console.ReadLine();
-        // Lägg till resultatet i highscore-tabellen
-        AddHighScoreEntry(playerName, score);
-        Console.WriteLine();
-        Console.WriteLine("High Scores:");
-        ShowHighScores();
-    }
 }
-static class ListExtensions
-{
-    public static void Shuffle<T>(this IList<T> list, Random random)
-    {
-        int n = list.Count;
-        while (n > 1)
-        {
-            n--;
-            int k = random.Next(n + 1);
-            T value = list[k];
-            list[k] = list[n];
-            list[n] = value;
-        }
-    }
-}
-class Program
-{
-    static void Main(string[] args)
-    {
-        QuizGame quizGame = new QuizGame();
-        quizGame.LoadQuestionsFromAPI();
-        quizGame.PlayQuiz();
-    }
-}
-
 ```
 
 ## Fråga till AI
