@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Web;
 using Newtonsoft.Json;
 class QuizQuestion
 {
@@ -30,6 +31,7 @@ class QuizGame
             // Ladda ner JSON-data från API:et
             string json = webClient.DownloadString(apiUrl);
             // Konvertera JSON till objekt
+
             dynamic data = JsonConvert.DeserializeObject(json);
             if (data != null && data.results != null)
             {
@@ -38,8 +40,8 @@ class QuizGame
                 {
                     QuizQuestion question = new QuizQuestion
                     {
-                        Question = result.question,
-                        CorrectAnswer = result.correct_answer,
+                        Question = HttpUtility.HtmlDecode(result.question.ToString()),
+                        CorrectAnswer = HttpUtility.HtmlDecode(result.correct_answer.ToString()),
                         IncorrectAnswers = new List<string>()
                     };
                     // Lägg till de inkorrekta svar som finns i datan
